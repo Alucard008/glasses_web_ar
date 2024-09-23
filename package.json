@@ -1,9 +1,9 @@
 {
-  "name": "webar.rocks.face_demos",
+  "name": "glasses_demos",
   "version": "1.0.0",
-  "description": "WebAR.rocks.face demos in a modern environment",
+  "description": "A demo for galsses AR",
   "main": "index.js",
-  "author": "Xavier Bourry",
+  "author": "Abdullah Bin Masood",
   "license": "",
   "scripts": {
     "start": "cross-env NODE_ENV=development webpack serve --host localhost  --config config/webpack.dev.js",
@@ -39,10 +39,7 @@
     "webpack-dev-server": "^3.11.2",
     "webpack-merge": "^5.7.3"
   },
-  "repository": {
-    "type": "git",
-    "url": "git@github.com:WebAR-rocks/WebAR.rocks.face"
-  },
+ 
   "dependencies": {
     "@react-three/fiber": "^7.0.20",
     "@react-three/postprocessing": "^2.0.3",

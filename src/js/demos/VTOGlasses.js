@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, Suspense } from 'react';
 import { Canvas, useFrame, useThree, useLoader } from '@react-three/fiber';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import BackButton from '../components/BackButton.js';
+
 import VTOButton from '../components/VTOButton.js';
 import NN from '../contrib/WebARRocksFace/neuralNets/NN_GLASSES_9.json';
 import mirrorHelper from '../contrib/WebARRocksFace/helpers/WebARRocksMirror.js';
@@ -10,6 +10,7 @@ import GLTFModel1 from '../../assets/VTOGlasses/models3D/glasses2.glb';
 import GLTFModel2 from '../../assets/VTOGlasses/models3D/Red Glasses.glb';
 import GLTFOccluderModel from '../../assets/VTOGlasses/models3D/occluder1.glb';
 import envMap from '../../assets/VTOGlasses/envmaps/venice_sunset_1k.hdr';
+import * as THREE from 'three';
 
 let _threeFiber = null;
 
@@ -38,8 +39,10 @@ const compute_sizing = () => {
 
 const VTOModelContainer = (props) => {
   mirrorHelper.clean();
-
+  const normalScale = 80;
   const objRef = useRef();
+  const modelRef = useRef();
+
   useEffect(() => {
     const threeObject3DParent = objRef.current;
     if (threeObject3DParent.children.length === 0) return;
@@ -54,10 +57,13 @@ const VTOModelContainer = (props) => {
       threeObject3D,
       props.faceIndex
     );
+
+    modelRef.current = model; // Save a reference to the model
   }, [props.GLTFModel, props.sizing]);
 
   const gltf = useLoader(GLTFLoader, props.GLTFModel);
   const model = gltf.scene.clone();
+  modelRef.current = model;
 
   const isDebugOccluder = false;
   const gltfOccluder = useLoader(GLTFLoader, props.GLTFOccluderModel);
@@ -66,6 +72,37 @@ const VTOModelContainer = (props) => {
     occluderModel,
     isDebugOccluder
   );
+
+  // Track the model's position and adjust visibility based on proximity to the camera
+  useFrame(({ camera }) => {
+    if (modelRef.current) {
+      const currentPosition = new THREE.Vector3();
+      modelRef.current.getWorldPosition(currentPosition);
+
+      // Calculate the distance from the camera to the glasses model
+      const distanceToCamera = camera.position.distanceTo(currentPosition);
+      console.log('distance', distanceToCamera);
+
+      // Check if the model is too close to the camera
+      if (distanceToCamera < 100 || distanceToCamera > 550) {
+        // Hide the model if it's too close or too far from the camera
+        modelRef.current.visible = true;
+
+        // Show the popup
+        if (props.popUpRef.current) {
+          props.popUpRef.current.style.display = 'none';
+        }
+      } else {
+        // Show the model and hide the popup when within optimal range
+        modelRef.current.visible = false;
+
+        // Hide the popup
+        if (props.popUpRef.current) {
+          props.popUpRef.current.style.display = 'block';
+        }
+      }
+    }
+  });
 
   return (
     <object3D ref={objRef}>
@@ -96,9 +133,11 @@ const VTOGlasses = (props) => {
   const [isInitialized] = useState(true);
   const [choice, setChoice] = useState(false);
   const [modelChoice, setModelChoice] = useState('');
+  const [showPopup, setShowPopup] = useState(false);
 
   const togglePauseRef = useRef();
   const canvasFaceRef = useRef();
+  const popUpRef = useRef();
 
   const _settings = {
     glassesBranches: {
@@ -118,7 +157,7 @@ const VTOGlasses = (props) => {
       threshold: 0.5,
       intensity: 8,
       kernelSizeLevel: 0,
-      computeScale: 0.5,
+      computeScale: 2,
       luminanceSmoothing: 0.7,
     },
   };
@@ -244,6 +283,8 @@ const VTOGlasses = (props) => {
             GLTFOccluderModel={_settings.GLTFOccluderModel}
             faceIndex={0}
             glassesBranches={_settings.glassesBranches}
+            // setShowPopup={setShowPopup}
+            popUpRef={popUpRef}
           />
         </Suspense>
 
@@ -270,8 +311,6 @@ const VTOGlasses = (props) => {
         height={sizing.height}
       />
 
-      <BackButton />
-
       <div className="VTOButtons">
         <VTOButton onClick={() => setModel(GLTFModel1)}>Glasses 1</VTOButton>
         <VTOButton onClick={() => setModel(GLTFModel2)}>Glasses 2</VTOButton>
@@ -283,6 +322,24 @@ const VTOGlasses = (props) => {
           {get_pauseButtonText(_isPaused)}
         </VTOButton>
         <VTOButton onClick={capture_image}>Capture</VTOButton>
+      </div>
+
+      <div
+        ref={popUpRef}
+        style={{
+          display: 'none',
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          // padding: '20px',
+          // backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          color: 'red',
+          borderRadius: '10px',
+          zIndex: 10,
+        }}
+      >
+        Please move back a little
       </div>
     </div>
   );
